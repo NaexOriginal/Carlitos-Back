@@ -6,9 +6,9 @@ namespace Carlitos5G.Services
     public interface IAdminServices
     {
         Task<ServiceResponse<IEnumerable<Admin>>> GetAllAdminsAsync();
-        Task<ServiceResponse<Admin>> GetAdminByIdAsync(string id);
+        Task<ServiceResponse<Admin>> GetAdminByIdAsync(Guid id);
         Task<ServiceResponse<Admin>> CreateAdminAsync(Admin admin);
         Task<ServiceResponse<Admin>> UpdateAdminAsync(Admin admin);
-        Task<ServiceResponse<bool>> DeleteAdminAsync(string id);
+        Task<ServiceResponse<bool>> DeleteAdminAsync(Guid id);
     }
 }

@@ -28,9 +28,19 @@ namespace Carlitos5G.Controllers
 
         // GET: api/AuditLogs/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<AuditLog>> GetAuditLog(int id)
+        public async Task<ActionResult<AuditLog>> GetAuditLog(string id)
         {
-            var log = await _context.AuditLogs.FindAsync(id);
+            if (!Guid.TryParse(id, out Guid auditLogGuidId))
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "ID de administrador inválido",
+                    ErrorDetails = "El formato del ID proporcionado no es un GUID válido"
+                });
+            }
+            
+            var log = await _context.AuditLogs.FindAsync(auditLogGuidId);
 
             if (log == null)
             {

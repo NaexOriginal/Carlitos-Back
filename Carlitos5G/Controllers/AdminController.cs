@@ -35,17 +35,35 @@ namespace Carlitos5G.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAdminById(string id)
         {
-            var admin = await _adminService.GetAdminByIdAsync(id);
+            if (!Guid.TryParse(id, out Guid adminGuidId))
+            {
+                return BadRequest(new ServiceResponse<Admin>
+                {
+                    Success = false,
+                    Message = "ID de administrador inválido",
+                    ErrorDetails = "El formato del ID proporcionado no es un GUID válido"
+                });
+
+            }
+
+            var admin = await _adminService.GetAdminByIdAsync(adminGuidId);
+
             if (admin == null)
             {
-                return NotFound();
+                return NotFound(new ServiceResponse<Admin>
+                {
+                    Success = false,
+                    Message = "Administrador no encontrado",
+                    ErrorDetails = $"No se encontró ningún administador con el ID: {id}"
+                });
             }
+            
             return Ok(admin);
         }
 
         // Crear un nuevo administrador
         [HttpPost]
-        public async Task<IActionResult> CreateAdmin([FromBody] Admin adminDto)
+        public async Task<IActionResult> CreateAdmin([FromBody] Admin admin)
         {
             if (!ModelState.IsValid)
             {
@@ -65,15 +83,7 @@ namespace Carlitos5G.Controllers
             }
 
             try
-            {
-                var admin = new Admin
-                {
-                    Id = adminDto.Id,
-                    Name = adminDto.Name,
-                    Email = adminDto.Email,
-                    Password = adminDto.Password
-                };
-
+            {   
                 var result = await _adminService.CreateAdminAsync(admin);
                 return Ok(result);
             }
@@ -93,15 +103,27 @@ namespace Carlitos5G.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAdmin(string id, [FromBody] Admin admin)
         {
-            if (id != admin.Id.ToString())
+            if (!Guid.TryParse(id, out Guid adminGuidId))
             {
-                return BadRequest();
+                return BadRequest(new ServiceResponse<Admin>
+                {
+                    Success = false,
+                    Message = "ID de administrador inválido.",
+                    ErrorDetails = "El formato del ID proporcionado no es un GUID válido."
+                });
             }
 
+            admin.Id = adminGuidId;
             var updatedAdmin = await _adminService.UpdateAdminAsync(admin);
-            if (updatedAdmin == null)
+
+            if (updatedAdmin == null || !updatedAdmin.Success)
             {
-                return NotFound();
+                return NotFound(new ServiceResponse<Admin>
+                {
+                    Success = false,
+                    Message = "Administrador no encontrado o error al actualizar.",
+                    ErrorDetails = updatedAdmin?.ErrorDetails
+                });
             }
 
             return Ok(updatedAdmin);
@@ -111,10 +133,26 @@ namespace Carlitos5G.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAdmin(string id)
         {
-            var success = await _adminService.DeleteAdminAsync(id);
-            if (success == null)
+            if (!Guid.TryParse(id, out Guid adminGuidId))
             {
-                return NotFound();
+                return BadRequest(new ServiceResponse<bool>
+                {
+                    Success = false,
+                    Message = "ID de administrador inválido",
+                    ErrorDetails = "El formato del ID proporcionado no es un GUID válido"
+                });
+            }
+
+            var successResponse = await _adminService.DeleteAdminAsync(adminGuidId);
+
+            if (!successResponse.Success)
+            {
+                if (successResponse.Message == "Administrador no encontrado")
+                {
+                    return NotFound(successResponse);
+                }
+
+                return BadRequest(successResponse);
             }
 
             return NoContent();

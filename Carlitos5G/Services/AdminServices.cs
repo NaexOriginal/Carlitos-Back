@@ -32,7 +32,7 @@ namespace Carlitos5G.Services
             return response;
         }
 
-        public async Task<ServiceResponse<Admin>> GetAdminByIdAsync(string id)
+        public async Task<ServiceResponse<Admin>> GetAdminByIdAsync(Guid id)
         {
             var response = new ServiceResponse<Admin>();
             try
@@ -117,7 +117,7 @@ namespace Carlitos5G.Services
             return response;
         }
 
-        public async Task<ServiceResponse<bool>> DeleteAdminAsync(string id)
+        public async Task<ServiceResponse<bool>> DeleteAdminAsync(Guid id)
         {
             var response = new ServiceResponse<bool>();
             try
@@ -133,6 +133,8 @@ namespace Carlitos5G.Services
 
                 _context.Admins.Remove(admin);
                 await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync("Admins", "Delete", id.ToString(), null, "system");
 
                 response.Data = true;
                 response.Message = "Administrador eliminado exitosamente.";
