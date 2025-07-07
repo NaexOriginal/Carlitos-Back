@@ -42,6 +42,7 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Usercheck> Userchecks { get; set; }
     public virtual DbSet<Videogame> Videogames { get; set; }
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
+    public virtual DbSet<Enrollment> Enrollments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
