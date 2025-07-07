@@ -17,7 +17,7 @@ namespace Carlitos5G.Dtos
         public string Email { get; set; } = null!;
 
         [StringLength(100, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 100 caracteres.")]
-        public string? Password { get; set; }
+        public string Password { get; set; } = null!;
 
         public string? Image { get; set; } // Para GET (ruta de la imagen)
 

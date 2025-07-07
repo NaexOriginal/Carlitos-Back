@@ -42,6 +42,7 @@ namespace Carlitos5G.Services
                     }).ToListAsync();
 
                 response.Data = flipbooks;
+                response.Success = true;
             }
             catch (Exception ex)
             {
@@ -101,25 +102,37 @@ namespace Carlitos5G.Services
             try
             {
 
-                string? PdfUrl = null;
+                string? pdfUrl = null;
                 int pageCount = 0;
-                if (dto.MediaFile != null)
-                {
-                    var result = await _fileUploadService.UploadAndConvertPdfAsync(dto.MediaFile);
-                    PdfUrl = result.PdfUrl;
-                    pageCount = result.PageCount;
+                string? directoryPath = null;
+                string? imageUrl = null;
 
+                if (dto.MediaFile != null && dto.MediaFile.Length > 0)
+                {
+                    var pdfUploadResult = await _fileUploadService.UploadAndConvertPdfAsync(dto.MediaFile);
+
+                    if (pdfUploadResult == null || string.IsNullOrEmpty(pdfUploadResult.PdfUrl))
+                    {
+                        response.Success = false;
+                        response.Message = "Error al subir o procesar el archivo PDF. La URL del PDF es nula o vacía";
+                        return response;
+                    }
+
+                    pdfUrl = pdfUploadResult.PdfUrl;
+                    pageCount = pdfUploadResult.PageCount;
+
+                    //* Aseguramos que PdfUrl no es nulo antes de llamar a Replace
+                    directoryPath = pdfUrl.Replace(".pdf", "");
+                }
+                else
+                {
+                    response.Success = false;
+                    response.Message = "El archivo PDF del flipbook es obligatorio y no fue proporcionado o está vacío";
+                    return response;
                 }
 
-
-
-                string? imageUrl = null;
                 if (dto.ThumbnailFile != null)
                     imageUrl = await _imageUploadService.UploadImageAsync(dto.ThumbnailFile);
-
-                //Aqui se guarda la ruta del pdf
-                string directoryPath = PdfUrl.Replace(".pdf", "");
-
 
                 var flipbook = new Flipbook
                 {
@@ -129,7 +142,7 @@ namespace Carlitos5G.Services
                     Title = dto.Title,
                     Description = dto.Description,
                     Pages = dto.Pages ?? pageCount,
-                    MediaPath = PdfUrl ?? dto.MediaPath,
+                    MediaPath = pdfUrl,
                     ThumbnailPath = imageUrl ?? dto.ThumbnailPath,
                     Directory = directoryPath,
                     Status = dto.Status,
@@ -139,6 +152,7 @@ namespace Carlitos5G.Services
                 _context.Flipbooks.Add(flipbook);
                 await _context.SaveChangesAsync();
 
+                response.Success = true;
                 response.Data = dto;
                 response.Message = "Flipbook creado exitosamente.";
             }

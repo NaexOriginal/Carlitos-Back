@@ -1,3 +1,11 @@
 # Carpetas no necesarias
 bin
 obj
+
+# Evitar Subir archivos innecesarios
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.mp4

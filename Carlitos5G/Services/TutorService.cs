@@ -91,27 +91,48 @@ namespace Carlitos5G.Services
             var response = new ServiceResponse<TutorDto>();
             try
             {
+                //* Verificamos si el correo existe
+                var existingTutor = await _context.Tutors.FirstOrDefaultAsync(t => t.Email == tutorDto.Email);
+
+                if (existingTutor != null)
+                {
+                    response.Success = false;
+                    response.Message = "El correo electrónico ya está registrado";
+                    return response;
+                }
+
                 string? imageUrl = null;
                 if (tutorDto.ImageFile != null)
                 {
                     imageUrl = await _imageUploadService.UploadImageAsync(tutorDto.ImageFile);
                 }
+                else
+                {
+                    imageUrl = "Default.jpg";
+                }
 
                 var tutor = new Tutor
                 {
-                    Id = tutorDto.Id,
                     Name = tutorDto.Name,
                     Profession = tutorDto.Profession,
                     Email = tutorDto.Email,
                     Password = SHA256Helper.ComputeSHA256Hash(tutorDto.Password),
                     Image = imageUrl,
-                    UpdationDate = tutorDto.UpdationDate
+                    UpdationDate = DateTime.UtcNow
                 };
 
                 _context.Tutors.Add(tutor);
                 await _context.SaveChangesAsync();
 
-                response.Data = tutorDto;
+                response.Data = new TutorDto
+                {
+                    Id = tutor.Id,
+                    Name = tutor.Name,
+                    Profession = tutor.Profession,
+                    Email = tutor.Email,
+                    Image = tutor.Image,
+                    UpdationDate = tutor.UpdationDate
+                };
                 response.Message = "Tutor creado exitosamente.";
             }
             catch (Exception ex)
@@ -129,7 +150,15 @@ namespace Carlitos5G.Services
             var response = new ServiceResponse<TutorDto>();
             try
             {
-                var existingTutor = await _context.Tutors.FirstOrDefaultAsync(t => t.Id.ToString() == id);
+                //* Convertir el ID a Guid para FindAsync (si no lo hiciste ya)
+                if (!Guid.TryParse(id, out Guid tutorGuidId))
+                {
+                    response.Success = false;
+                    response.Message = "ID de tutor inválido";
+                    return response;
+                }
+
+                var existingTutor = await _context.Tutors.FindAsync(tutorGuidId);
                 if (existingTutor == null)
                 {
                     response.Success = false;
@@ -140,18 +169,36 @@ namespace Carlitos5G.Services
                 existingTutor.Name = tutorDto.Name;
                 existingTutor.Profession = tutorDto.Profession;
                 existingTutor.Email = tutorDto.Email;
-                existingTutor.UpdationDate = tutorDto.UpdationDate;
-                existingTutor.Password = SHA256Helper.ComputeSHA256Hash(tutorDto.Password);
+
+                if (!string.IsNullOrWhiteSpace(tutorDto.Password))
+                {
+                    existingTutor.Password = SHA256Helper.ComputeSHA256Hash(tutorDto.Password);
+                }
+                existingTutor.UpdationDate = DateTime.UtcNow;
 
                 if (tutorDto.ImageFile != null)
                 {
                     string imageUrl = await _imageUploadService.UploadImageAsync(tutorDto.ImageFile);
                     existingTutor.Image = imageUrl;
                 }
+                else if (string.IsNullOrEmpty(existingTutor.Image) || existingTutor.Image != "default.jpg")
+                {
+                    existingTutor.Image = "default.jpg";
+                }
 
                 await _context.SaveChangesAsync();
 
-                response.Data = tutorDto;
+                response.Data = new TutorDto
+                {
+                    Id = existingTutor.Id,
+                    Name = existingTutor.Name,
+                    Profession = existingTutor.Profession,
+                    Email = existingTutor.Profession,
+                    Image = existingTutor.Image,
+                    UpdationDate = existingTutor.UpdationDate,
+                    IsEdit = tutorDto.IsEdit
+                };
+                response.Success = true;
                 response.Message = "Tutor actualizado exitosamente.";
             }
             catch (Exception ex)

@@ -18,7 +18,8 @@ namespace Carlitos5G.Data.Configurations
                 .ValueGeneratedOnAdd();
 
             entity.Property(e => e.TutorId)
-                .HasColumnName("tutor_id");
+                .HasColumnName("tutor_id")
+                .HasMaxLength(36);
 
             entity.Property(e => e.PlaylistId)
                 .HasColumnName("playlist_id")
@@ -33,11 +34,11 @@ namespace Carlitos5G.Data.Configurations
                 .HasMaxLength(1000);
 
             entity.Property(e => e.MediaPath)
-                .HasColumnName("media_path")
+                .HasColumnName("video")
                 .HasMaxLength(100); // similar a video
 
             entity.Property(e => e.ThumbnailPath)
-                .HasColumnName("thumbnail_path")
+                .HasColumnName("thumb")
                 .HasMaxLength(100);
 
             entity.Property(e => e.Date)

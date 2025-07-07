@@ -115,18 +115,31 @@ namespace Carlitos5G.Services
                     Title = playlistDto.Title,
                     Description = playlistDto.Description,
                     Thumb = imageUrl,
-                    Date = playlistDto.Date,
+                    Date = DateTime.UtcNow,
                     Status = playlistDto.Status,
                     Categoria = playlistDto.Categoria,
                     Iframe = playlistDto.Iframe,
-                    UpdationDate = playlistDto.UpdationDate,
+                    UpdationDate = DateTime.UtcNow,
                     IsDiplomado = playlistDto.IsDiplomado
                 };
 
                 _context.Playlists.Add(playlist);
                 await _context.SaveChangesAsync();
 
-                response.Data = playlistDto;
+                response.Data = new PlaylistDto
+                {
+                    Id = playlist.Id,
+                    TutorId = playlist.TutorId,
+                    Title = playlist.Title,
+                    Description = playlist.Description,
+                    Thumb = playlist.Thumb,
+                    Date = playlist.Date,
+                    Status = playlist.Status,
+                    Categoria = playlist.Categoria,
+                    Iframe = playlist.Iframe,
+                    UpdationDate = playlist.UpdationDate,
+                    IsDiplomado = playlist.IsDiplomado
+                };
                 response.Message = "Playlist creada exitosamente.";
             }
             catch (Exception ex)
@@ -157,11 +170,10 @@ namespace Carlitos5G.Services
                 playlist.TutorId = playlistDto.TutorId;
                 playlist.Title = playlistDto.Title;
                 playlist.Description = playlistDto.Description;
-                playlist.Date = playlistDto.Date;
                 playlist.Status = playlistDto.Status;
                 playlist.Categoria = playlistDto.Categoria;
                 playlist.Iframe = playlistDto.Iframe;
-                playlist.UpdationDate = playlistDto.UpdationDate;
+                playlist.UpdationDate = DateTime.UtcNow;
                 playlist.IsDiplomado = playlistDto.IsDiplomado;
 
                 if (playlistDto.ImageFile != null)
@@ -186,9 +198,17 @@ namespace Carlitos5G.Services
             return response;
         }
 
-        public async Task<ServiceResponse<bool>> DeletePlaylistAsync(string id)
+        public async Task<ServiceResponse<bool>> DeletePlaylistAsync(string idString)
         {
             var response = new ServiceResponse<bool>();
+
+            if (!Guid.TryParse(idString, out Guid idToDelete))
+            {
+                response.Success = false;
+                response.Message = "Formato de ID de playlist invalido";
+                response.Data = false;
+                return response;
+            }
 
             // Use transaction to ensure all operations complete or none do
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -198,7 +218,7 @@ namespace Carlitos5G.Services
                 // Find the playlist
                 var playlist = await _context.Playlists
                     .Include(p => p.Contents) // Make sure you have this navigation property
-                    .FirstOrDefaultAsync(p => p.Id.ToString() == id);
+                    .FirstOrDefaultAsync(p => p.Id == idToDelete);
 
                 if (playlist == null)
                 {
@@ -208,74 +228,97 @@ namespace Carlitos5G.Services
                     return response;
                 }
 
-                // Get all content IDs in the playlist for cascading deletions
-                var contentIds = playlist.Contents.Select(c => c.Id).ToList();
+                var uploadedFilesPath = Path.Combine(Directory.GetCurrentDirectory(), "uploaded_files");
 
-                // 1. Delete likes associated with content
-                var likes = await _context.Likes
-                    .Where(l => contentIds.Contains((Guid)l.ContentId))
-                    .ToListAsync();
-                _context.Likes.RemoveRange(likes);
-
-                // 2. Delete comments associated with content
-                var comments = await _context.Comments
-                    .Where(c => contentIds.Contains((Guid)c.ContentId))
-                    .ToListAsync();
-                _context.Comments.RemoveRange(comments);
-
-                // 3. Delete file system resources
-                foreach (var content in playlist.Contents)
+                if (!string.IsNullOrEmpty(playlist.Thumb) && playlist.Thumb.StartsWith("/images/"))
                 {
-                    // Delete the actual video files
-                    if (!string.IsNullOrEmpty(content.MediaPath))
-                    {
-                        string videoPath = Path.Combine("uploaded_files", content.MediaPath);
-                        if (File.Exists(videoPath))
-                        {
-                            File.Delete(videoPath);
-                        }
-                    }
-
-                    // Delete thumbnail files
-                    if (!string.IsNullOrEmpty(content.ThumbnailPath))
-                    {
-                        string thumbPath = Path.Combine("uploaded_files", content.ThumbnailPath);
-                        if (File.Exists(thumbPath))
-                        {
-                            File.Delete(thumbPath);
-                        }
-                    }
-                }
-
-                // 4. Delete playlist thumbnail
-                if (!string.IsNullOrEmpty(playlist.Thumb))
-                {
-                    string playlistThumbPath = Path.Combine("uploaded_files", playlist.Thumb);
+                    string fileName = playlist.Thumb.Replace("/images/", "");
+                    string playlistThumbPath = Path.Combine(uploadedFilesPath, fileName);
                     if (File.Exists(playlistThumbPath))
                     {
                         File.Delete(playlistThumbPath);
+                        Console.WriteLine($"Deleted playlist thumbnail: {playlistThumbPath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Playlist thumbnail not found: {playlistThumbPath}");
                     }
                 }
 
-                // 5. Delete bookmarks
+                if (playlist.Contents != null && playlist.Contents.Any())
+                {
+                    var contentIds = playlist.Contents.Select(c => c.Id).ToList();
+
+                    // Delete likes associated with content
+                    var likes = await _context.Likes
+                        .Where(l => l.ContentId.HasValue && contentIds.Contains(l.ContentId.Value))
+                        .ToListAsync();
+                    _context.Likes.RemoveRange(likes);
+                    Console.WriteLine($"Deleted {likes.Count} likes.");
+
+                    // Delete comments associated with content
+                    var comments = await _context.Comments
+                        .Where(c => c.ContentId.HasValue && contentIds.Contains(c.ContentId.Value))
+                        .ToListAsync();
+                    _context.Comments.RemoveRange(comments);
+                    Console.WriteLine($"Deleted {comments.Count} comments.");
+
+                    // Delete file system resources for each content
+                    foreach (var content in playlist.Contents)
+                    {
+                        // Delete the actual video files
+                        if (!string.IsNullOrEmpty(content.MediaPath) && content.MediaPath.StartsWith("/videos/")) // Asume "/videos/" para tus archivos de video
+                        {
+                            string videoFileName = content.MediaPath.Replace("/videos/", "");
+                            string videoPath = Path.Combine(uploadedFilesPath, videoFileName);
+                            if (File.Exists(videoPath))
+                            {
+                                File.Delete(videoPath);
+                                Console.WriteLine($"Deleted content video: {videoPath}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Content video not found: {videoPath}");
+                            }
+                        }
+
+                        // Delete thumbnail files
+                        if (!string.IsNullOrEmpty(content.ThumbnailPath) && content.ThumbnailPath.StartsWith("/content_thumbs/")) // Asume "/content_thumbs/" para tus miniaturas de contenido
+                        {
+                            string thumbFileName = content.ThumbnailPath.Replace("/content_thumbs/", "");
+                            string contentThumbPath = Path.Combine(uploadedFilesPath, thumbFileName);
+                            if (File.Exists(contentThumbPath))
+                            {
+                                File.Delete(contentThumbPath);
+                                Console.WriteLine($"Deleted content thumbnail: {contentThumbPath}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Content thumbnail not found: {contentThumbPath}");
+                            }
+                        }
+                    }
+
+                    _context.Contents.RemoveRange(playlist.Contents); // Ya los cargamos con .Include()
+                    Console.WriteLine($"Deleted {playlist.Contents.Count} content records.");
+                }
+                else
+                {
+                    Console.WriteLine("No contents associated with this playlist to delete.");
+                }
+
                 var bookmarks = await _context.Bookmarks
                     .Where(b => b.PlaylistId == playlist.Id)
                     .ToListAsync();
                 _context.Bookmarks.RemoveRange(bookmarks);
+                Console.WriteLine($"Deleted {bookmarks.Count} bookmarks.");
 
-                // 6. Delete content records
-                var contents = await _context.Contents
-                    .Where(c => c.PlaylistId == playlist.Id)
-                    .ToListAsync();
-                _context.Contents.RemoveRange(contents);
 
-                // 7. Finally, delete the playlist itself
+                // Finally, delete the playlist itself
                 _context.Playlists.Remove(playlist);
+                Console.WriteLine($"Deleted playlist record: {playlist.Id}");
 
-                // Save all changes
                 await _context.SaveChangesAsync();
-
-                // Commit transaction
                 await transaction.CommitAsync();
 
                 response.Data = true;
@@ -283,18 +326,20 @@ namespace Carlitos5G.Services
             }
             catch (Exception ex)
             {
-                // Roll back transaction in case of error
                 await transaction.RollbackAsync();
 
                 response.Success = false;
                 response.Message = "Error al eliminar la playlist.";
                 response.ErrorDetails = ex.Message;
                 response.Data = false;
+                // Agrega un log para ver la excepción real en la consola del servidor
+                Console.WriteLine($"Error deleting playlist: {ex.Message}");
+                Console.WriteLine($"Inner Exception: {ex.InnerException?.Message}");
             }
 
             return response;
         }
-    
+
     }
 }
 

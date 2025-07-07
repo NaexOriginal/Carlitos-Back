@@ -8,7 +8,7 @@ namespace Carlitos5G.Services
         Task<ServiceResponse<IEnumerable<CommentDto>>> GetAllCommentsAsync();
         Task<ServiceResponse<CommentDto>> GetCommentByIdAsync(string id);
         Task<ServiceResponse<CommentDto>> CreateCommentAsync(CommentDto commentDto);
-        Task<ServiceResponse<CommentDto>> UpdateCommentAsync(CommentDto commentDto);
+        Task<ServiceResponse<CommentDto>> UpdateCommentAsync(Guid id, CommentDto commentDto);
         Task<ServiceResponse<bool>> DeleteCommentAsync(string id);
     }
 }

@@ -23,7 +23,8 @@ namespace Carlitos5G.Dtos
 
         public string? MediaPath { get; set; } = null!; // antes Video
 
-        public IFormFile? MediaFile { get; set; }
+        [Required(ErrorMessage = "El archivo de video es obligatorio para el contenido")]
+        public IFormFile MediaFile { get; set; } = null!;
 
         public string? ThumbnailPath { get; set; } = null!; // antes Thumb
 

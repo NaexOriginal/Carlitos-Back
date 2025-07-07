@@ -142,7 +142,16 @@ namespace Carlitos5G.Services
             var response = new ServiceResponse<bool>();
             try
             {
-                var content = await _context.Contents.FindAsync(contentDto.Id);
+
+                if (!Guid.TryParse(id, out Guid contentGuid))
+                {
+                    response.Success = false;
+                    response.Message = "El formato del ID proporcionado no es válido.";
+                    response.Data = false;
+                    return response;
+                }
+
+                var content = await _context.Contents.FindAsync(contentGuid);
                 if (content == null)
                 {
                     response.Success = false;
@@ -162,12 +171,26 @@ namespace Carlitos5G.Services
                 if (contentDto.ThumbnailFile != null)
                 {
                     string imageUrl = await _imageUploadService.UploadImageAsync(contentDto.ThumbnailFile);
+                    if (string.IsNullOrEmpty(imageUrl))
+                    {
+                        response.Success = false;
+                        response.Message = "Error al subir la nueva miniatura. No se actualizó la imagen.";
+                        return response;
+                    }
+
                     content.ThumbnailPath = imageUrl;
                 }
 
                 if (contentDto.MediaFile != null)
                 {
                     string videoUrl = await _videoUploadService.UploadVideoAsync(contentDto.MediaFile);
+                    if (string.IsNullOrEmpty(videoUrl))
+                    {
+                        response.Success = false;
+                        response.Message = "Error al subir el nuevo video. No se actualizó el video.";
+                        return response;
+                    }
+
                     content.MediaPath = videoUrl;
                 }
 
@@ -176,6 +199,7 @@ namespace Carlitos5G.Services
 
                 response.Data = true;
                 response.Message = "Playlist actualizada exitosamente.";
+                response.Success = true;
             }
             catch (Exception ex)
             {

@@ -42,7 +42,23 @@ namespace Carlitos5G.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
                 var createdUser = await _userService.CreateUserAsync(userDto);
+
+                if (!createdUser.Success)
+                {
+                    return BadRequest(new ServiceResponse<UserDto>
+                    {
+                        Success = false,
+                        Message = createdUser.Message,
+                        ErrorDetails = createdUser.ErrorDetails
+                    });
+                    
+                }
                 return CreatedAtAction(nameof(GetUserById), new { id = createdUser.Data.Id }, createdUser.Data);
             }
             catch (Exception ex)

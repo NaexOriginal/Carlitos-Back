@@ -47,18 +47,25 @@ namespace Carlitos5G.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateComment(string id, [FromBody] CommentDto commentDto)
         {
-            if (id != commentDto.Id.ToString())
+            if (!Guid.TryParse(id, out Guid commentGuid))
             {
-                return BadRequest("Los IDs no coinciden.");
+                return BadRequest("El ID proporcionado en la URL no tiene un formato GUID válido.");
             }
 
-            var existingComment = await _commentService.GetCommentByIdAsync(id);
-            if (existingComment == null)
+            commentDto.Id = commentGuid;
+
+            var serviceResponse = await _commentService.UpdateCommentAsync(commentGuid, commentDto);
+
+            if (!serviceResponse.Success)
             {
-                return NotFound();
+                if (serviceResponse.Message == "Comentario no encontrado.")
+                {
+                    return NotFound(serviceResponse.Message);
+                }
+                // Para cualquier otro error (ej. DbUpdateException capturada en el servicio)
+                return BadRequest(serviceResponse.Message ?? "Error desconocido al actualizar el comentario.");
             }
 
-            await _commentService.UpdateCommentAsync(commentDto);
             return NoContent();
         }
 

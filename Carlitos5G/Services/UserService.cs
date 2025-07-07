@@ -69,7 +69,6 @@ namespace Carlitos5G.Services
                         Id = user.Id,
                         Name = user.Name,
                         Email = user.Email,
-                        Password = user.Password,
                         Image = user.Image,
                         Genero = user.Genero,
                         Telefono = user.Telefono,
@@ -94,30 +93,57 @@ namespace Carlitos5G.Services
             var response = new ServiceResponse<UserDto>();
             try
             {
+                //* Verificamos si el correo existe
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == userDto.Email);
+
+                if (existingUser != null)
+                {
+                    response.Success = false;
+                    response.Message = "El correo electrónico ya está registrado";
+                    return response;
+                }
+
                 string? imageUrl = null;
                 if (userDto.ImageFile != null)
                 {
                     imageUrl = await _imageUploadService.UploadImageAsync(userDto.ImageFile);
                 }
+                else
+                {
+                    imageUrl = "default.jpg";
+                }
 
                 var user = new User
                 {
-                    Id = userDto.Id,
                     Name = userDto.Name,
                     Email = userDto.Email,
                     Password = SHA256Helper.ComputeSHA256Hash(userDto.Password),
                     Image = imageUrl,
                     Genero = userDto.Genero,
                     Telefono = userDto.Telefono,
-                    FechaAsig = userDto.FechaAsig,
+                    FechaAsig = DateTime.UtcNow,
                     EtapaEducativa = userDto.EtapaEducativa,
-                    Grado = userDto.Grado
+                    Grado = userDto.Grado,
+                    UpdationDate = DateTime.UtcNow
                 };
 
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                response.Data = userDto;
+                response.Data = new UserDto
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Image = user.Image,
+                    Genero = user.Genero,
+                    Telefono = user.Telefono,
+                    FechaAsig = user.FechaAsig,
+                    EtapaEducativa = user.EtapaEducativa,
+                    Grado = user.Grado,
+                    UpdationDate = user.UpdationDate
+                };
+
                 response.Message = "Usuario creado exitosamente.";
             }
             catch (Exception ex)
@@ -153,10 +179,9 @@ namespace Carlitos5G.Services
 
                 user.Genero = userDto.Genero;
                 user.Telefono = userDto.Telefono;
-                user.FechaAsig = userDto.FechaAsig;
                 user.EtapaEducativa = userDto.EtapaEducativa;
                 user.Grado = userDto.Grado;
-                user.UpdationDate = userDto.UpdationDate;
+                user.UpdationDate = DateTime.UtcNow;
 
                 // Manejo de imagen
                 if (userDto.ImageFile != null)
@@ -171,7 +196,20 @@ namespace Carlitos5G.Services
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
 
-                response.Data = userDto;
+                response.Data = new UserDto
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Image = user.Image,
+                    Genero = user.Genero,
+                    Telefono = user.Telefono,
+                    FechaAsig = user.FechaAsig,
+                    EtapaEducativa = user.EtapaEducativa,
+                    Grado = user.Grado,
+                    UpdationDate = DateTime.UtcNow,
+                    IsEdit = userDto.IsEdit
+                };
                 response.Message = "Usuario actualizado exitosamente.";
             }
             catch (Exception ex)
@@ -188,7 +226,15 @@ namespace Carlitos5G.Services
             var response = new ServiceResponse<bool>();
             try
             {
-                var user = await _context.Users.FindAsync(id);
+                if (!Guid.TryParse(id, out Guid userId))
+                {
+                    response.Success = false;
+                    response.Message = "ID de usuario inválido";
+                    return response;
+                }
+
+                var user = await _context.Users.FindAsync(userId);
+                
                 if (user == null)
                 {
                     response.Success = false;

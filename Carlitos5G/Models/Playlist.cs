@@ -31,6 +31,8 @@ public partial class Playlist
 
     public bool? IsDiplomado { get; set; }
 
+    public bool? IsVisto { get; set; }
+
     public virtual ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
 
     public virtual ICollection<Content> Contents { get; set; } = new List<Content>();

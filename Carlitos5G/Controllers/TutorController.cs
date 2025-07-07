@@ -47,19 +47,20 @@ namespace Carlitos5G.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateTutor([FromForm] TutorDto tutorDto)
         {
-            try
+            var createdTutor = await _tutorService.CreateTutorAsync(tutorDto);
+
+            if (!createdTutor.Success)
             {
-                var createdTutor = await _tutorService.CreateTutorAsync(tutorDto);
-                return CreatedAtAction(nameof(GetTutorById), new { id = createdTutor.Data.Id }, createdTutor.Data);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
+                return BadRequest(new ServiceResponse<TutorDto>
                 {
-                    Message = ex.Message,
-                    Inner = ex.InnerException?.Message
+                    Success = false,
+                    Message = createdTutor.Message,
+                    ErrorDetails = createdTutor.ErrorDetails,
+                    Data = null
                 });
             }
+
+            return CreatedAtAction(nameof(GetTutorById), new { id = createdTutor.Data.Id }, createdTutor.Data);
         }
 
 

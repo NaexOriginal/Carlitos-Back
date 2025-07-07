@@ -107,18 +107,20 @@ namespace Carlitos5G.Services
             return response;
         }
 
-        public async Task<ServiceResponse<CommentDto>> UpdateCommentAsync(CommentDto commentDto)
+        public async Task<ServiceResponse<CommentDto>> UpdateCommentAsync(Guid id, CommentDto commentDto)
         {
             var response = new ServiceResponse<CommentDto>();
             try
             {
-                var comment = await _context.Comments.FirstOrDefaultAsync(c => c.Id == commentDto.Id);
+                var comment = await _context.Comments.FirstOrDefaultAsync(c => c.Id == id);
                 if (comment == null)
                 {
                     response.Success = false;
                     response.Message = "Comentario no encontrado.";
                     return response;
                 }
+
+                commentDto.Id = id;
 
                 comment.ContentId = commentDto.ContentId;
                 comment.UserId = commentDto.UserId;

@@ -13,10 +13,9 @@ namespace Carlitos5G.Data.Configurations
             entity.ToTable("playlist");
 
             entity.Property(e => e.Id)
-                .HasColumnName("Id")
+                .HasColumnName("id")
                 .HasMaxLength(36)
                 .IsRequired()
-                
                 .ValueGeneratedOnAdd();
 
             entity.Property(e => e.Categoria)
@@ -41,6 +40,10 @@ namespace Carlitos5G.Data.Configurations
                 .HasDefaultValue(false)
                 .HasColumnName("is_diplomado");
 
+            entity.Property(e => e.IsVisto)
+                .HasDefaultValue(false)
+                .HasColumnName("is_visto");
+
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("deactive")
@@ -62,7 +65,7 @@ namespace Carlitos5G.Data.Configurations
             entity.Property(e => e.UpdationDate)
                 .HasColumnType("datetime")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnName("updation_date");
+                .HasColumnName("UpdationDate");
 
             entity.HasOne(d => d.Tutor)
                 .WithMany(p => p.Playlists)

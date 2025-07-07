@@ -27,6 +27,7 @@ namespace Carlitos5G.Dtos
 
         public string? MediaPath { get; set; }
 
+        [Required(ErrorMessage = "El pdf es obligatorio")]
         public IFormFile? MediaFile { get; set; } = null!; // antes Archivo
 
         public string? ThumbnailPath { get; set; } = null!; // antes Thumb
